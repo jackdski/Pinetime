@@ -97,12 +97,13 @@ Cst816S::TouchInfos Cst816S::GetTouchInfo() {
 }
 
 void Cst816S::Sleep() {
-  // TODO re enable sleep mode
-  //twiMaster.Sleep();
+  // TODO Put this in a better place
+  twiMaster.Sleep();
   nrf_gpio_cfg_default(6);
   nrf_gpio_cfg_default(7);
 }
 
 void Cst816S::Wakeup() {
+  twiMaster.Wakeup();
   Init();
 }

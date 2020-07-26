@@ -16,8 +16,9 @@ namespace Pinetime {
   namespace System {
     class SystemTask {
       public:
-        enum class Messages {GoToSleep, GoToRunning, OnNewTime, OnNewNotification, BleConnected,
-            BleFirmwareUpdateStarted, BleFirmwareUpdateFinished, OnTouchEvent, OnButtonEvent
+        enum class Messages {GoToSleep, GoToRunning, GoToLowPower, GoToNotLowPower, 
+            OnNewTime, OnNewNotification, OnTouchEvent, OnButtonEvent, OnStartCharging, OnStopCharging,
+            BleConnected, BleFirmwareUpdateStarted, BleFirmwareUpdateFinished
         };
 
         SystemTask(Drivers::SpiMaster &spi, Drivers::St7789 &lcd,
@@ -50,7 +51,7 @@ namespace Pinetime {
         std::unique_ptr<Pinetime::Applications::DisplayApp> displayApp;
         Pinetime::Controllers::Ble& bleController;
         Pinetime::Controllers::DateTime& dateTimeController;
-        QueueHandle_t systemTaksMsgQueue;
+        QueueHandle_t systemTaskMsgQueue;
         bool isSleeping = false;
         Pinetime::Drivers::Watchdog watchdog;
         Pinetime::Drivers::WatchdogView watchdogView;
@@ -71,9 +72,11 @@ namespace Pinetime {
         void ReloadIdleTimer() const;
         bool isBleDiscoveryTimerRunning = false;
         uint8_t bleDiscoveryTimer = 0;
-        static constexpr uint32_t idleTime = 15000;
+        static constexpr uint32_t idleTime = pdMS_TO_TICKS(10000);          // 10s
+        static constexpr uint32_t lowPowerIdleTime = pdMS_TO_TICKS(5000);   // 5s
         TimerHandle_t idleTimer;
         bool doNotGoToSleep = false;
+        bool low_power = false;
 
         void GoToRunning();
 

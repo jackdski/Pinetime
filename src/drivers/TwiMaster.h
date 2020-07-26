@@ -19,6 +19,8 @@ namespace Pinetime {
         TwiMaster(const Modules module, const Parameters& params);
 
         void Init();
+        void Sleep();
+        void Wakeup();
         void Read(uint8_t deviceAddress, uint8_t registerAddress, uint8_t* buffer, size_t size);
         void Write(uint8_t deviceAddress, uint8_t registerAddress, const uint8_t* data, size_t size);
 
@@ -26,13 +28,12 @@ namespace Pinetime {
         void Read(uint8_t deviceAddress, uint8_t* buffer, size_t size, bool stop);
         void Write(uint8_t deviceAddress, const uint8_t* data, size_t size, bool stop);
         NRF_TWIM_Type* twiBaseAddress;
-        SemaphoreHandle_t mutex;
         const Modules module;
         const Parameters params;
         static constexpr uint8_t maxDataSize{8};
         static constexpr uint8_t registerSize{1};
         uint8_t internalBuffer[maxDataSize + registerSize];
-
+        SemaphoreHandle_t mutex;
     };
   }
 }

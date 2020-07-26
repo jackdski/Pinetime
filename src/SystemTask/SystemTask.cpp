@@ -35,7 +35,7 @@ SystemTask::SystemTask(Drivers::SpiMaster &spi, Drivers::St7789 &lcd,
                        bleController{bleController}, dateTimeController{dateTimeController},
                        watchdog{}, watchdogView{watchdog}, notificationManager{notificationManager},
                        nimbleController(*this, bleController,dateTimeController, notificationManager, spiNorFlash) {
-  systemTaksMsgQueue = xQueueCreate(10, 1);
+  systemTaskMsgQueue = xQueueCreate(10, 1);
 }
 
 void SystemTask::Start() {
@@ -59,7 +59,7 @@ void SystemTask::Work() {
   spiNorFlash.Init();
 
   // Write the 'image OK' flag if it's not already done
-  // TODO implement a better verification mecanism for the image (ask for user confirmation via UI/BLE ?)
+  // TODO implement a better verification mechanism for the image (ask for user confirmation via UI/BLE ?)
   uint32_t* imageOkPtr = reinterpret_cast<uint32_t *>(0x7BFE8);
   uint32_t imageOk = *imageOkPtr;
   if(imageOk != 1)
@@ -108,19 +108,30 @@ void SystemTask::Work() {
 
   while(true) {
     uint8_t msg;
-    if (xQueueReceive(systemTaksMsgQueue, &msg, isSleeping?2500 : 1000)) {
+    if (xQueueReceive(systemTaskMsgQueue, &msg, isSleeping?2500 : 1000)) {
       Messages message = static_cast<Messages >(msg);
       switch(message) {
-        case Messages::GoToRunning:
-          isSleeping = false;
-          xTimerStart(idleTimer, 0);
-          nimbleController.StartAdvertising();
-          break;
         case Messages::GoToSleep:
           NRF_LOG_INFO("[SystemTask] Going to sleep");
           xTimerStop(idleTimer, 0);
           displayApp->PushMessage(Pinetime::Applications::DisplayApp::Messages::GoToSleep);
           isSleeping = true;
+          break;
+        case Messages::GoToRunning:
+          isSleeping = false;
+          xTimerStart(idleTimer, 0);
+          nimbleController.StartAdvertising();
+          break;
+        case Messages::GoToLowPower:
+          this->low_power = true;
+          // the screen is the most important thing to limit the on-time of, since it consumes the most power 
+          xTimerChangePeriod(idleTimer, lowPowerIdleTime, 0);
+          displayApp->PushMessage(Applications::DisplayApp::Messages::GoToLowPower);
+          break;
+        case Messages::GoToNotLowPower:
+          this->low_power = false;
+          xTimerChangePeriod(idleTimer, idleTime, 0);
+          displayApp->PushMessage(Applications::DisplayApp::Messages::GoToNotLowPower);
           break;
         case Messages::OnNewTime:
           ReloadIdleTimer();
@@ -129,6 +140,18 @@ void SystemTask::Work() {
         case Messages::OnNewNotification:
           if(isSleeping) GoToRunning();
           displayApp->PushMessage(Pinetime::Applications::DisplayApp::Messages::NewNotification);
+          break;
+        case Messages::OnTouchEvent:
+          ReloadIdleTimer();
+          break;
+        case Messages::OnButtonEvent:
+          ReloadIdleTimer();
+          break;
+        case Messages::OnStartCharging:
+          displayApp->PushMessage(Pinetime::Applications::DisplayApp::Messages::BleFirmwareUpdateStarted);
+          break;
+        case Messages::OnStopCharging:
+          displayApp->PushMessage(Pinetime::Applications::DisplayApp::Messages::BleFirmwareUpdateStarted);
           break;
         case Messages::BleConnected:
           ReloadIdleTimer();
@@ -146,12 +169,6 @@ void SystemTask::Work() {
           displayApp->PushMessage(Pinetime::Applications::DisplayApp::Messages::BleFirmwareUpdateFinished);
           if(bleController.State() == Pinetime::Controllers::Ble::FirmwareUpdateStates::Validated)
             NVIC_SystemReset();
-          break;
-        case Messages::OnTouchEvent:
-          ReloadIdleTimer();
-          break;
-        case Messages::OnButtonEvent:
-          ReloadIdleTimer();
           break;
         default: break;
       }
@@ -171,6 +188,14 @@ void SystemTask::Work() {
     uint32_t systick_counter = nrf_rtc_counter_get(portNRF_RTC_REG);
     dateTimeController.UpdateTime(systick_counter);
     batteryController.Update();
+
+    // Try to extend battery life by limiting things like screen on-time
+    if(batteryController.IsLowPowerMode() and !low_power) {
+      PushMessage(Messages::GoToLowPower);
+    }
+    else if(!batteryController.IsLowPowerMode() and low_power) {
+      PushMessage(Messages::GoToNotLowPower);
+    }
 
     monitor.Process();
 
@@ -195,6 +220,7 @@ void SystemTask::GoToRunning() {
   PushMessage(Messages::GoToRunning);
   displayApp->PushMessage(Applications::DisplayApp::Messages::GoToRunning);
   displayApp->PushMessage(Applications::DisplayApp::Messages::UpdateBatteryLevel);
+  // Todo: PushMessage(GoToRunning) to something like a sensors queue to wake up TWI
 }
 
 void SystemTask::OnTouchEvent() {
@@ -208,10 +234,11 @@ void SystemTask::OnTouchEvent() {
 void SystemTask::PushMessage(SystemTask::Messages msg) {
   BaseType_t xHigherPriorityTaskWoken;
   xHigherPriorityTaskWoken = pdFALSE;
-  xQueueSendFromISR(systemTaksMsgQueue, &msg, &xHigherPriorityTaskWoken);
+  xQueueSendFromISR(systemTaskMsgQueue, &msg, &xHigherPriorityTaskWoken);
   if (xHigherPriorityTaskWoken) {
     /* Actual macro used here is port specific. */
     // TODO : should I do something here?
+    // vPortYIELD(xHigherPriorityTaskWoken); ?
   }
 }
 

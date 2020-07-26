@@ -1,5 +1,5 @@
-#include <sdk/integration/nrfx/nrfx_log.h>
-#include <sdk/modules/nrfx/hal/nrf_gpio.h>
+// #include <libraries/log/nrf_log.h>
+// #include <sdk/modules/nrfx/hal/nrf_gpio.h>
 #include <cstring>
 #include "TwiMaster.h"
 
@@ -47,8 +47,7 @@ void TwiMaster::Init() {
   twiBaseAddress->EVENTS_SUSPENDED = 0;
   twiBaseAddress->EVENTS_TXSTARTED = 0;
 
-  twiBaseAddress->ENABLE = (TWIM_ENABLE_ENABLE_Enabled << TWIM_ENABLE_ENABLE_Pos);
-
+  Wakeup();
 
   /* // IRQ
      NVIC_ClearPendingIRQ(_IRQn);
@@ -60,19 +59,31 @@ void TwiMaster::Init() {
 
 }
 
+void TwiMaster::Sleep() {
+  twiBaseAddress->ENABLE = 0;
+}
+
+void TwiMaster::Wakeup() {
+  twiBaseAddress->ENABLE = (TWIM_ENABLE_ENABLE_Enabled << TWIM_ENABLE_ENABLE_Pos);
+}
+
 void TwiMaster::Read(uint8_t deviceAddress, uint8_t registerAddress, uint8_t *data, size_t size) {
   xSemaphoreTake(mutex, portMAX_DELAY);
+  Wakeup();
   Write(deviceAddress, &registerAddress, 1, false);
   Read(deviceAddress, data, size, true);
+  Sleep();
   xSemaphoreGive(mutex);
 }
 
 void TwiMaster::Write(uint8_t deviceAddress, uint8_t registerAddress, const uint8_t *data, size_t size) {
   ASSERT(size <= maxDataSize);
   xSemaphoreTake(mutex, portMAX_DELAY);
+  Wakeup();
   internalBuffer[0] = registerAddress;
   std::memcpy(internalBuffer+1, data, size);
   Write(deviceAddress, internalBuffer, size+1, true);
+  Sleep();
   xSemaphoreGive(mutex);
 }
 

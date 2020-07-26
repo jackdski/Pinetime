@@ -7,6 +7,7 @@ const char* BatteryIcon::GetBatteryIcon(float batteryPercent) {
   if(batteryPercent > 75.0f) return Symbols::batteryThreeQuarter;
   if(batteryPercent > 50.0f) return Symbols::batteryHalf;
   if(batteryPercent > 25.0f) return Symbols::batteryOneQuarter;
+  // TODO: show battery low for batteryPercent < 25
   return Symbols::batteryEmpty;
 }
 

@@ -95,6 +95,12 @@ void DisplayApp::Refresh() {
         touchPanel.Sleep();
         state = States::Idle;
         break;
+      case Messages::GoToLowPower:
+        // TODO: Display a notification and/or make battery icon red
+        break;
+      case Messages::GoToNotLowPower:
+        // TODO: Display non-red battery icon
+        break;
       case Messages::GoToRunning:
         lcd.Wakeup();
         touchPanel.Wakeup();
@@ -147,6 +153,12 @@ void DisplayApp::Refresh() {
               lvgl.SetFullRefresh(Components::LittleVgl::FullRefreshDirections::Up);
           }
         }
+      case Messages::OnStartCharging:
+        // TODO: display charging notification here, indicate charging in battery icon
+        break;
+      case Messages::OnStopCharging:
+        // TODO: indicate battery is not charging in battery icon
+        break;
 
 //        lvgl.SetFullRefresh(Components::LittleVgl::FullRefreshDirections::Down);
 //        currentScreen.reset(nullptr);
