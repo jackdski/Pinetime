@@ -85,6 +85,8 @@ std::unique_ptr<Pinetime::System::SystemTask> systemTask;
 Pinetime::Controllers::NotificationManager notificationManager;
 
 void nrfx_gpiote_evt_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+  vTaskResume(systemTask->taskHandle);
+  
   if(pin == pinTouchIrq) {
     systemTask->OnTouchEvent();
     return ;

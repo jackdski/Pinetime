@@ -211,6 +211,10 @@ void DisplayApp::IdleState() {
 
 }
 
+bool DisplayApp::IsIdle() {
+  return state == States::Idle ? 1 : 0;
+}
+
 void DisplayApp::PushMessage(DisplayApp::Messages msg) {
   BaseType_t xHigherPriorityTaskWoken;
   xHigherPriorityTaskWoken = pdFALSE;

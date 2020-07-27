@@ -18,7 +18,7 @@ bool Spi::Read(uint8_t* cmd, size_t cmdSize, uint8_t *data, size_t dataSize) {
 }
 
 void Spi::Sleep() {
-  // TODO sleep spi
+  spiMaster.Sleep();
   nrf_gpio_cfg_default(pinCsn);
 }
 

@@ -44,6 +44,7 @@ namespace Pinetime {
 
         void Sleep();
         void Wakeup();
+        bool IsIdle() const { return idle; }
 
       private:
         void SetupWorkaroundForFtpan58(NRF_SPIM_Type *spim, uint32_t ppi_channel, uint32_t gpiote_channel);
@@ -61,6 +62,7 @@ namespace Pinetime {
         volatile size_t currentBufferSize = 0;
         volatile TaskHandle_t taskToNotify;
         SemaphoreHandle_t mutex;
+        bool idle = false;
     };
   }
 }

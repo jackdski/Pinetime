@@ -128,7 +128,6 @@ void SpiMaster::OnEndEvent() {
 
     nrf_gpio_pin_set(this->pinCsn);
     currentBufferAddr = 0;
-    Sleep();
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(mutex, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -163,7 +162,6 @@ bool SpiMaster::Write(uint8_t pinCsn, const uint8_t *data, size_t size) {
   if(data == nullptr) return false;
   auto ok = xSemaphoreTake(mutex, portMAX_DELAY);
   ASSERT(ok == true);
-  Wakeup();
   taskToNotify = xTaskGetCurrentTaskHandle();
 
 
@@ -198,7 +196,6 @@ bool SpiMaster::Write(uint8_t pinCsn, const uint8_t *data, size_t size) {
 
 bool SpiMaster::Read(uint8_t pinCsn, uint8_t* cmd, size_t cmdSize, uint8_t *data, size_t dataSize) {
     xSemaphoreTake(mutex, portMAX_DELAY);
-    Wakeup();
     taskToNotify = nullptr;
 
     this->pinCsn = pinCsn;
@@ -236,15 +233,16 @@ void SpiMaster::Sleep() {
   nrf_gpio_cfg_default(params.pinSCK);
   nrf_gpio_cfg_default(params.pinMOSI);
   nrf_gpio_cfg_default(params.pinMISO);
+  idle = true;
 }
 
 void SpiMaster::Wakeup() {
   Init();
+  idle = false;
 }
 
 bool SpiMaster::WriteCmdAndBuffer(uint8_t pinCsn, const uint8_t *cmd, size_t cmdSize, const uint8_t *data, size_t dataSize) {
   xSemaphoreTake(mutex, portMAX_DELAY);
-  Wakeup();
   taskToNotify = nullptr;
 
   this->pinCsn = pinCsn;

@@ -16,6 +16,7 @@ namespace Pinetime {
   namespace System {
     class SystemTask {
       public:
+        TaskHandle_t taskHandle;
         enum class Messages {GoToSleep, GoToRunning, GoToLowPower, GoToNotLowPower, 
             OnNewTime, OnNewNotification, OnTouchEvent, OnButtonEvent, OnStartCharging, OnStopCharging,
             BleConnected, BleFirmwareUpdateStarted, BleFirmwareUpdateFinished
@@ -37,10 +38,9 @@ namespace Pinetime {
         void OnTouchEvent();
 
         void OnIdle();
+        void Sleep();
 
       private:
-        TaskHandle_t taskHandle;
-
         Pinetime::Drivers::SpiMaster& spi;
         Pinetime::Drivers::St7789& lcd;
         Pinetime::Drivers::SpiNorFlash& spiNorFlash;

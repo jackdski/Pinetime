@@ -6,6 +6,7 @@ namespace Pinetime {
     class Spi;
     class SpiNorFlash {
       public:
+        enum class States {Idle, Running};
         explicit SpiNorFlash(Spi& spi);
         SpiNorFlash(const SpiNorFlash&) = delete;
         SpiNorFlash& operator=(const SpiNorFlash&) = delete;
@@ -38,6 +39,7 @@ namespace Pinetime {
 
         void Sleep();
         void Wakeup();
+        bool IsIdle();
       private:
         enum class Commands : uint8_t {
             PageProgram = 0x02,
@@ -54,6 +56,7 @@ namespace Pinetime {
         static constexpr uint16_t pageSize = 256;
         Spi& spi;
         Identification device_id;
+        States state = States::Running;
     };
   }
 }

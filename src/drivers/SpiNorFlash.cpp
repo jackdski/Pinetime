@@ -38,6 +38,10 @@ void SpiNorFlash::Wakeup() {
   }
 }
 
+bool SpiNorFlash::IsIdle() {
+  return (state == States::Idle) ? 1 : 0;
+}
+
 SpiNorFlash::Identification SpiNorFlash::ReadIdentificaion() {
   auto cmd = static_cast<uint8_t>(Commands::ReadIdentification);
   Identification identification;

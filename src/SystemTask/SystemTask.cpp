@@ -108,7 +108,7 @@ void SystemTask::Work() {
 
   while(true) {
     uint8_t msg;
-    if (xQueueReceive(systemTaskMsgQueue, &msg, isSleeping?2500 : 1000)) {
+    if (xQueueReceive(systemTaskMsgQueue, &msg, isSleeping ? 2500 : 1000)) {
       Messages message = static_cast<Messages >(msg);
       switch(message) {
         case Messages::GoToSleep:
@@ -120,6 +120,7 @@ void SystemTask::Work() {
         case Messages::GoToRunning:
           isSleeping = false;
           xTimerStart(idleTimer, 0);
+          vTaskResume(displayApp->taskHandle);
           nimbleController.StartAdvertising();
           break;
         case Messages::GoToLowPower:
@@ -199,6 +200,18 @@ void SystemTask::Work() {
 
     monitor.Process();
 
+     // Put peripherals to sleep if components are Idle/GoingToSleep
+    if(isSleeping && !doNotGoToSleep) {
+      // SPI components
+      if(displayApp->IsIdle() && spiNorFlash.IsIdle()) {
+        spi.Sleep();
+      }
+      // TODO: TWI/I2C components
+
+      // Suspend tasks
+      Sleep();
+    }
+
     if(!nrf_gpio_pin_read(pinButton))
       watchdog.Kick();
   }
@@ -220,7 +233,13 @@ void SystemTask::GoToRunning() {
   PushMessage(Messages::GoToRunning);
   displayApp->PushMessage(Applications::DisplayApp::Messages::GoToRunning);
   displayApp->PushMessage(Applications::DisplayApp::Messages::UpdateBatteryLevel);
-  // Todo: PushMessage(GoToRunning) to something like a sensors queue to wake up TWI
+
+  if(spi.IsIdle()) {
+  	spi.Wakeup();
+  }
+  if(twiMaster.IsIdle()) { 
+  	twiMaster.Wakeup();
+  }
 }
 
 void SystemTask::OnTouchEvent() {
@@ -251,4 +270,9 @@ void SystemTask::OnIdle() {
 void SystemTask::ReloadIdleTimer() const {
   if(isSleeping) return;
   xTimerReset(idleTimer, 0);
+}
+
+void SystemTask::Sleep() {
+	vTaskSuspend(displayApp->taskHandle);
+	vTaskSuspend(taskHandle);
 }

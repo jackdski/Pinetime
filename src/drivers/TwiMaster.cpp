@@ -47,8 +47,6 @@ void TwiMaster::Init() {
   twiBaseAddress->EVENTS_SUSPENDED = 0;
   twiBaseAddress->EVENTS_TXSTARTED = 0;
 
-  Wakeup();
-
   /* // IRQ
      NVIC_ClearPendingIRQ(_IRQn);
      NVIC_SetPriority(_IRQn, 2);
@@ -61,29 +59,27 @@ void TwiMaster::Init() {
 
 void TwiMaster::Sleep() {
   twiBaseAddress->ENABLE = 0;
+  idle = true;
 }
 
 void TwiMaster::Wakeup() {
   twiBaseAddress->ENABLE = (TWIM_ENABLE_ENABLE_Enabled << TWIM_ENABLE_ENABLE_Pos);
+  idle = false;
 }
 
 void TwiMaster::Read(uint8_t deviceAddress, uint8_t registerAddress, uint8_t *data, size_t size) {
   xSemaphoreTake(mutex, portMAX_DELAY);
-  Wakeup();
   Write(deviceAddress, &registerAddress, 1, false);
   Read(deviceAddress, data, size, true);
-  Sleep();
   xSemaphoreGive(mutex);
 }
 
 void TwiMaster::Write(uint8_t deviceAddress, uint8_t registerAddress, const uint8_t *data, size_t size) {
   ASSERT(size <= maxDataSize);
   xSemaphoreTake(mutex, portMAX_DELAY);
-  Wakeup();
   internalBuffer[0] = registerAddress;
   std::memcpy(internalBuffer+1, data, size);
   Write(deviceAddress, internalBuffer, size+1, true);
-  Sleep();
   xSemaphoreGive(mutex);
 }
 

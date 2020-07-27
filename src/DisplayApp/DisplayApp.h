@@ -27,6 +27,8 @@ namespace Pinetime {
   namespace Applications {
     class DisplayApp {
       public:
+        TaskHandle_t taskHandle;
+        
         enum class States {Idle, Running};
         enum class Messages : uint8_t {GoToSleep, GoToLowPower, GoToNotLowPower, GoToRunning, UpdateDateTime,
             UpdateBleConnection, UpdateBatteryLevel, TouchEvent, SwitchScreen, ButtonPushed,
@@ -47,8 +49,9 @@ namespace Pinetime {
         void StartApp(Apps app);
 
         void SetFullRefresh(FullRefreshDirections direction);
+
+        bool IsIdle();
       private:
-        TaskHandle_t taskHandle;
         static void Process(void* instance);
         void InitHw();
         Pinetime::Drivers::St7789& lcd;
