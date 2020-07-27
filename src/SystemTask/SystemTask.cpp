@@ -248,6 +248,10 @@ void SystemTask::OnTouchEvent() {
     PushMessage(Messages::OnTouchEvent);
     displayApp->PushMessage(Pinetime::Applications::DisplayApp::Messages::TouchEvent);
   }
+  else {
+  	vTaskResume(displayApp->taskHandle);
+  	GoToRunning();
+  }
 }
 
 void SystemTask::PushMessage(SystemTask::Messages msg) {
